@@ -144,6 +144,19 @@ public class MicrophoneWebGL : MonoBehaviour
     {
         stopEvent.Invoke();
     }
+
+
+    void Update()
+    {
+        try{
+            if(Lib.isInitialized && Lib.IsRecording()){
+                var volume = Lib.GetVolume();
+                Debug.Log($"Volume: {volume}");
+            }
+        }catch(System.Exception e){
+            Debug.LogError(e);
+        }
+    }
 }
 
 }

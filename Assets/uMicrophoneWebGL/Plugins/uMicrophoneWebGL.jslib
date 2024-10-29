@@ -10,6 +10,8 @@ const uMicrophoneWebGLPlugin = {
         audioContext: null,
         mediaStreamSource: null,
         scriptProcessor: null,
+        volumeAnalyser: null,
+        volumeDataArray: null,
         
         initialize: async function(startCallback, stopCallback, deviceListCallback, dataCallback) {
             this.startCallback = startCallback;
@@ -93,6 +95,13 @@ const uMicrophoneWebGLPlugin = {
                 this.scriptProcessor.onaudioprocess = this.onAudioProcess.bind(this);
                 this.source.connect(this.scriptProcessor);
                 this.scriptProcessor.connect(this.audioContext.destination);
+                
+                // Setup volume analyser
+                this.volumeAnalyser = this.audioContext.createAnalyser();
+                this.volumeAnalyser.fftSize = 256;
+                this.volumeDataArray = new Uint8Array(this.volumeAnalyser.frequencyBinCount);
+                this.source.connect(this.volumeAnalyser);
+                
                 Module.dynCall_v(this.startCallback);
             } catch(err) {
                 console.error(err);
@@ -139,6 +148,18 @@ const uMicrophoneWebGLPlugin = {
         isRecording: function() {
             return this.scriptProcessor !== null;
         },
+
+        getVolume: function() {
+            if (this.volumeAnalyser && this.volumeDataArray) {
+                this.volumeAnalyser.getByteFrequencyData(this.volumeDataArray);
+                let sum = 0;
+                for (let i = 0; i < this.volumeDataArray.length; i++) {
+                    sum += this.volumeDataArray[i];
+                }
+                return sum / this.volumeDataArray.length; // Return average volume level
+            }
+            return 0; // Return 0 if analyser or data array is not available
+        }
     },
 
     uMicrophoneWebGL_Initialize: async function(readyCallback, startCallback, stopCallback, deviceListCallback, dataCallback) {
@@ -191,6 +212,10 @@ const uMicrophoneWebGLPlugin = {
     
     uMicrophoneWebGL_IsRecording: function() {
         return uMicrophoneWebGL.isRecording();
+    },
+
+    uMicrophoneWebGL_GetVolume: function() {
+        return uMicrophoneWebGL.getVolume();
     },
 };
 
